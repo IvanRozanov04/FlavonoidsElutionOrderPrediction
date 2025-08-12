@@ -47,14 +47,14 @@ def PairwiseMetrics(y:np.array,pred:np.array,test_idx:np.array,formulas:np.array
     
     errors= (y[i] - y[j]) * (pred[i] - pred[j]) <= 0 
     
-    results["PER_test"] = errors[test_mask & valid_mask].sum() / (test_mask & valid_mask).sum()
-    results["PER_train"] = errors[train_mask & valid_mask].sum() / (train_mask & valid_mask).sum()
-    results["PER_mixed"] = errors[mixed_mask & valid_mask].sum() / (mixed_mask & valid_mask).sum()
+    results["PER_test"] = errors[test_mask & valid_mask].sum() / (test_mask & valid_mask).sum() if (test_mask & valid_mask).sum() !=0 else None
+    results["PER_train"] = errors[train_mask & valid_mask].sum() / (train_mask & valid_mask).sum() if (train_mask & valid_mask).sum() !=0 else None
+    results["PER_mixed"] = errors[mixed_mask & valid_mask].sum() / (mixed_mask & valid_mask).sum() if (mixed_mask & valid_mask).sum() !=0 else None
     
     if formulas is not None:
-        results["iPER_test"] = errors[test_mask & iso_mask & valid_mask].sum() / (test_mask & iso_mask & valid_mask).sum()
-        results["iPER_train"] = errors[train_mask & iso_mask & valid_mask].sum() / (train_mask & iso_mask & valid_mask).sum()
-        results["iPER_mixed"] = errors[mixed_mask & iso_mask & valid_mask].sum() / (mixed_mask & iso_mask & valid_mask).sum()
+        results["iPER_test"] = errors[test_mask & iso_mask & valid_mask].sum() / (test_mask & iso_mask & valid_mask).sum() if (test_mask & iso_mask & valid_mask).sum() != 0 else None
+        results["iPER_train"] = errors[train_mask & iso_mask & valid_mask].sum() / (train_mask & iso_mask & valid_mask).sum() if (train_mask & iso_mask & valid_mask).sum() != 0 else None 
+        results["iPER_mixed"] = errors[mixed_mask & iso_mask & valid_mask].sum() / (mixed_mask & iso_mask & valid_mask).sum() if (mixed_mask & iso_mask & valid_mask).sum() != 0 else None
         
         results['ni_test'] = (test_mask & iso_mask & valid_mask).sum()
         results['ni_train'] = (train_mask & iso_mask & valid_mask).sum()
