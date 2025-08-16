@@ -6,7 +6,7 @@ from itertools import combinations
 from Modules.HelperFunctions import compute_safe_linear_regression_metrics,compute_safe_interpolation_metrics
 from Modules.LinearModels.CVLinearModels import PairwiseMetrics as PMetrics
 from scipy.stats import kendalltau 
-DEVICE = 'mps' if torch.mps.is_available() else 'cpu'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def PairwiseMetrics(y:np.array,pred:np.array,test_idx:np.array,formulas:np.array,):
     """
@@ -183,7 +183,7 @@ def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outt
             best_model = inner_cv_func(X_train,y_train,classes_train,hyperparameters_grid,n_itter_inner,n_inner_splits)
             
             predictions = best_model(X).reshape(-1)
-            metrics = PairwiseMetrics(y,predictions,torch.tensor(test_idx,device=DEVICE,dtype=torch.int),formulas)
+            metrics = PairwiseMetrics(y,predictions,test_idx,formulas)
             results.append([metrics['PER_test'].cpu().detach().numpy(),metrics['PER_mixed'].cpu().detach().numpy(),metrics['iPER_test'].cpu().detach().numpy(),
                             metrics['iPER_mixed'].cpu().detach().numpy(),metrics['ni_test'].cpu().detach().numpy(),metrics['ni_mixed'].cpu().detach().numpy()])
     return results 
@@ -315,7 +315,7 @@ def ILD_cv(train_loader,X,y,classes,formulas,hyperparameters_grid,n_itter=1,n_sp
             y_np = y.cpu().detach().numpy().reshape(-1)
             if accumulator is not None:
                 accumulator.update(y_np,preds,test_idx,formulas)
-            metrics = PMetrics(y_np,-preds,test_idx,formulas)
+            metrics = PMetrics(y_np,preds,test_idx,formulas)
             regr_metrics = compute_safe_linear_regression_metrics(preds[test_idx],y_np[test_idx])
             int_metrics = compute_safe_interpolation_metrics(preds[test_idx],y_np[test_idx])
             

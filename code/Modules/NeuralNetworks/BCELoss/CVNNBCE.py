@@ -6,7 +6,7 @@ from itertools import combinations
 from Modules.HelperFunctions import compute_safe_linear_regression_metrics,compute_safe_interpolation_metrics
 from Modules.LinearModels.CVLinearModels import PairwiseMetrics as PMetrics
 from scipy.stats import kendalltau
-DEVICE = 'mps' if torch.mps.is_available() else 'cpu'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def PairwiseMetrics(y:np.array,pred:np.array,test_idx:np.array,formulas:np.array,):
     """
@@ -123,7 +123,7 @@ def RankNETCV(X, y, classes, hyperparameters_grid, n_itter=5,n_splits=5):
                 train_RankNet(model,train_loader=train_loader,num_epochs=hp['num_epochs'],optimizer=torch.optim.Adam(model.parameters(),lr=0.01,weight_decay=hp['weight_decay']))
                 
                 predictions = model(X).reshape(-1)
-                metrics = PairwiseMetrics(y,predictions,torch.tensor(test_idx,device=DEVICE,dtype=torch.int),formulas=None)
+                metrics = PairwiseMetrics(y,predictions,test_idx,formulas=None)
                 results.append(metrics['PER_mixed'])
     results_tensor = torch.stack(results).reshape(-1,n_itter*n_splits).mean(axis=1) 
     best_hp = hyperparameters_grid[torch.argmin(results_tensor)]
@@ -312,7 +312,7 @@ def ILD_cv(train_loader,X,y,classes,formulas,hyperparameters_grid,n_itter=1,n_sp
             y_np = y.cpu().detach().numpy().reshape(-1)
             if accumulator is not None:
                 accumulator.update(y_np,preds,test_idx,formulas)
-            metrics = PMetrics(y_np,-preds,test_idx,formulas)
+            metrics = PMetrics(y_np,preds,test_idx,formulas)
             regr_metrics = compute_safe_linear_regression_metrics(preds[test_idx],y_np[test_idx])
             int_metrics = compute_safe_interpolation_metrics(preds[test_idx],y_np[test_idx])
             

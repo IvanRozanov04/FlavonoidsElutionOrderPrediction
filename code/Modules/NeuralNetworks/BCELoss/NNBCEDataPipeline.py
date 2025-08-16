@@ -1,6 +1,6 @@
 #PyTorch
 import torch
-DEVICE = 'mps' if torch.mps.is_available() else 'cpu'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 def symmetric_swap_pytorch_batch(X, symmetric_pos, offset=10):
     """
     Perform symmetric swaps over a batch of feature vectors.
