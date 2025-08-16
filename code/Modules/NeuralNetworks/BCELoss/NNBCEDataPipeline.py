@@ -89,11 +89,11 @@ def batch_create_nlp(X1, X2, y1, y2, symmetric_pos=[(5,9),(6,8)], offset=10):
 
     # Step 1: Base pairs
     base_pairs = interleave_pairs(X1, X2)
-    base_labels = (y1 < y2).float()
+    base_labels = (y1 > y2).float()
 
     # Step 2: Add flipped (B, A) with inverse label
     flipped_pairs = interleave_pairs(X2, X1)
-    flipped_labels = (y2 < y1).float()
+    flipped_labels = (y2 > y1).float()
 
     # Step 3: Symmetric transformations
     X1_sym = symmetric_swap_pytorch_batch(X1, symmetric_pos, offset)
