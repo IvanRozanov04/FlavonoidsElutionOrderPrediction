@@ -134,44 +134,59 @@ def RankNETCV(X, y, classes, hyperparameters_grid, n_itter=5,n_splits=5):
 
 
 
-def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outter_splits=5, n_inner_splits=5,n_itter_out=5,n_itter_inner=5):
+def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outter_splits=5, n_inner_splits=5,n_itter_out=5,n_itter_inner=5,accumulator = None):
     """
-    Perform nested cross-validation for hyperparameter selection and evaluation.
+    Perform nested cross-validation for hyperparameter tuning and model evaluation.
 
-    Implements an outer/inner CV loop:
-    - **Outer loop**: splits data for unbiased performance estimation.
-    - **Inner loop**: selects the best hyperparameters using `inner_cv_func`.
-    - Trains a model with selected hyperparameters on inner training folds
-      and evaluates on the outer test fold.
+    This function implements a two-level cross-validation scheme:
+    - **Outer loop**: Splits data to estimate unbiased model performance.
+    - **Inner loop**: Selects the best hyperparameters using `inner_cv_func`.
+    - Trains the model with selected hyperparameters on inner training folds
+      and evaluates on the outer test fold using pairwise metrics.
+    - Optionally updates an accumulator with predictions and targets for each fold.
 
     Parameters
     ----------
     X : np.ndarray or torch.Tensor
-        Feature matrix of shape (N, D).
+        Feature matrix of shape (n_samples, n_features).
     y : np.ndarray or torch.Tensor
-        Target values of shape (N,).
+        Target values of shape (n_samples,).
     classes : array-like
         Class labels used for stratified splitting.
     formulas : array-like or None
-        Molecular identifiers for isomer-specific metrics.
+        Molecular identifiers or groupings for isoform-specific metrics.
     hyperparameters_grid : list of dict
-        Hyperparameter configurations to search.
+        Hyperparameter configurations to search during inner CV.
     inner_cv_func : callable
-        Function that returns a trained model given training data and hyperparameters.
+        Function returning a trained model given training data and hyperparameters.
+        Signature: (X_train, y_train, classes_train, hyperparameters_grid,
+                    n_itter_inner, n_inner_splits) -> trained_model
     n_outter_splits : int, optional
-        Number of outer folds. Default is 5.
+        Number of folds in the outer CV (default is 5).
     n_inner_splits : int, optional
-        Number of inner folds. Default is 5.
+        Number of folds in the inner CV (default is 5).
     n_itter_out : int, optional
-        Number of outer CV repetitions. Default is 5.
+        Number of outer CV repetitions (default is 5).
     n_itter_inner : int, optional
-        Number of inner CV repetitions. Default is 5.
+        Number of inner CV repetitions (default is 5).
+    accumulator : object, optional
+        Optional object with an `update(y, predictions, test_idx, formulas)` method
+        for accumulating predictions and metrics across folds. If None, accumulation is skipped.
 
     Returns
     -------
-    list of list[float]
-        Each element corresponds to an outer test fold:
+    list of list of float
+        Each element corresponds to an outer test fold and contains:
         [PER_test, PER_mixed, iPER_test, iPER_mixed, ni_test, ni_mixed]
+        - PER_*: pairwise error rates
+        - iPER_*: isoform-restricted pairwise error rates
+        - ni_*: counts of isoform pairs evaluated
+
+    Notes
+    -----
+    - Supports both NumPy arrays and PyTorch tensors as inputs.
+    - Uses `PairwiseMetrics` to compute pairwise error rates.
+    - Accumulator, if provided, is updated with predictions for each outer fold.
     """
     results = []
     for i in range(n_itter_out):
@@ -184,6 +199,8 @@ def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outt
             
             predictions = best_model(X).reshape(-1)
             metrics = PairwiseMetrics(y,predictions,test_idx,formulas)
+            if accumulator is not None:
+                accumulator.update(y.cpu().detach().numpy().reshape(-1),predictions.cpu().detach().numpy().reshape(-1),test_idx,formulas)
             results.append([metrics['PER_test'].cpu().detach().numpy(),metrics['PER_mixed'].cpu().detach().numpy(),metrics['iPER_test'].cpu().detach().numpy(),
                             metrics['iPER_mixed'].cpu().detach().numpy(),metrics['ni_test'].cpu().detach().numpy(),metrics['ni_mixed'].cpu().detach().numpy()])
     return results 

@@ -156,52 +156,58 @@ def CV_LinReg(X, y, classes, hyperparameters_grid, n_itter=5,n_splits=5):
     best_model.fit(X,y)
     return best_model
 
-def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outter_splits=5, n_inner_splits=5,n_itter_out=5,n_itter_inner=5):
+def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outter_splits=5, n_inner_splits=5,n_itter_out=5,n_itter_inner=5,accumulator = None):
     """
-    Performs nested cross-validation to evaluate model performance with hyperparameter tuning.
+    Perform nested cross-validation with optional accumulation of metrics.
 
-    The outer loop performs stratified splits to create training and test sets.
-    For each outer training set, the specified inner cross-validation function is used
-    to select the best hyperparameters and train a model.
-    The trained model is then evaluated on the outer test set using pairwise error metrics.
+    This function evaluates model performance with hyperparameter tuning via a nested
+    cross-validation scheme. The outer loop generates stratified splits for training
+    and testing. For each outer training set, the `inner_cv_func` is used to select
+    optimal hyperparameters and train a model. The trained model is then evaluated
+    on the outer test set using pairwise error metrics. Optionally, an accumulator
+    object can be updated with predictions for additional tracking or aggregation.
 
     Parameters
     ----------
     X : np.ndarray
         Feature matrix of shape (n_samples, n_features).
     y : np.ndarray
-        Target values.
+        Target values (numeric or categorical).
     classes : np.ndarray
         Class labels used for stratified splitting.
     formulas : np.ndarray or None
-        Molecular formulas or other grouping used in pairwise metrics for isoform filtering.
+        Molecular formulas or other groupings used in pairwise metrics (e.g., for isoform filtering).
     hyperparameters_grid : list or np.ndarray
-        List of hyperparameter values to search over in inner cross-validation.
+        Candidate hyperparameter values for the inner cross-validation search.
     inner_cv_func : callable
-        A function implementing the inner cross-validation that returns a trained model.
-        Signature: (X_train, y_train, classes_train, hyperparameters_grid, n_itter_inner, n_inner_splits) -> model
+        Inner cross-validation function that returns a trained model. Signature:
+        (X_train, y_train, classes_train, hyperparameters_grid, n_itter_inner, n_inner_splits) -> model
     n_outter_splits : int, optional
-        Number of folds in the outer stratified K-fold (default: 5).
+        Number of folds in the outer stratified K-fold (default is 5).
     n_inner_splits : int, optional
-        Number of folds in the inner stratified K-fold (default: 5).
+        Number of folds in the inner stratified K-fold (default is 5).
     n_itter_out : int, optional
-        Number of random iterations of outer cross-validation (default: 5).
+        Number of repeated iterations of outer cross-validation (default is 5).
     n_itter_inner : int, optional
-        Number of random iterations of inner cross-validation (default: 5).
+        Number of repeated iterations of inner cross-validation (default is 5).
+    accumulator : object, optional
+        Optional object with an `update(y, predictions, test_idx, formulas)` method
+        for accumulating metrics across folds. If None, accumulation is skipped.
 
     Returns
     -------
     list of list of float
-        A list of results, where each element contains:
+        A list of results for each outer fold iteration. Each element contains:
         [PER_test, PER_mixed, iPER_test, iPER_mixed, ni_test, ni_mixed]
-        - PER_*: pairwise error rates on various splits
+        - PER_*: pairwise error rates on the respective splits
         - iPER_*: isoform-restricted pairwise error rates
         - ni_*: counts of isoform pairs evaluated
 
     Notes
     -----
     - Uses PairwiseMetrics to compute error rates between pairs of samples.
-    - Inner CV function must accept the specified signature and return a trained model.
+    - The inner CV function must accept the specified signature and return a trained model.
+    - If `accumulator` is provided, it is updated with predictions for each outer fold.
     """
     results = []
     for i in range(n_itter_out):
@@ -212,6 +218,8 @@ def NestedCV(X, y, classes,formulas, hyperparameters_grid, inner_cv_func, n_outt
             best_model = inner_cv_func(X_train,y_train,classes_train,hyperparameters_grid,n_itter_inner,n_inner_splits)
             predictions = (best_model.coef_ @ X.T).reshape(-1)
             metrics = PairwiseMetrics(y,predictions,test_idx,formulas)
+            if accumulator is not None:
+                accumulator.update(y,predictions,test_idx,formulas)
             results.append([metrics['PER_test'],metrics['PER_mixed'],metrics['iPER_test'],metrics['iPER_mixed'],metrics['ni_test'],metrics['ni_mixed']])
     return results 
 
