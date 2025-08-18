@@ -92,18 +92,19 @@ def CV_LogReg(X, y, classes, hyperparameters_grid, n_itter=5,n_splits=5):
         Logistic regression model fitted on the entire dataset using the best hyperparameter.
     """
     results = []
-    for hp in hyperparameters_grid:
-        for i in range(n_itter):
-            kf = StratifiedKFold(n_splits=n_splits,shuffle=True,random_state=i)
-            for train_idx, test_idx in kf.split(X,classes):
-                X_train,y_train = X[train_idx],y[train_idx]
-                pairs,labels = linear_pairs(X_train,y_train,np.zeros(len(y_train)))
+    for i in range(n_itter):
+        kf = StratifiedKFold(n_splits=n_splits,shuffle=True,random_state=i)
+        for train_idx, test_idx in kf.split(X,classes):
+            X_train,y_train = X[train_idx],y[train_idx]
+            pairs,labels = linear_pairs(X_train,y_train,np.zeros(len(y_train)))
+            for hp in hyperparameters_grid:
+                # 5 splits, 5 itterations, 10 hp
                 model = LogisticRegression(fit_intercept=False,C=hp)
                 model.fit(pairs,labels)
                 predictions = (model.coef_@X.T).reshape(-1)
                 metrics = PairwiseMetrics(y,predictions,test_idx,formulas=None)
                 results.append(metrics['PER_mixed'])
-    results = np.array(results).reshape(-1,n_itter*n_splits).mean(axis=1)  
+    results = np.array(results).reshape(-1,len(hyperparameters_grid)).mean(axis=0)  
     best_hp = hyperparameters_grid[np.argmin(results)]    
     best_model = LogisticRegression(fit_intercept=False,C=best_hp)
     pairs,labels = linear_pairs(X,y,np.zeros(len(y)))

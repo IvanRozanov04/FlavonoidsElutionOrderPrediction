@@ -112,23 +112,21 @@ def RankNETCV(X, y, classes, hyperparameters_grid, n_itter=5,n_splits=5):
         Trained RankNet model using the best hyperparameters found.
     """
     results = []
-    for hp in hyperparameters_grid:
-        for i in range(n_itter):
-            kf = StratifiedKFold(n_splits=n_splits,shuffle=True,random_state=i)
-            for train_idx, test_idx in kf.split(X,classes):
-                X_train,y_train = X[train_idx],y[train_idx]
-                train_loader = DataloaderRankNet(X_train,y_train,None,batch_size=hp['batch_size'])
-                
+    for i in range(n_itter):
+        kf = StratifiedKFold(n_splits=n_splits,shuffle=True,random_state=i)
+        for train_idx, test_idx in kf.split(X,classes):
+            X_train,y_train = X[train_idx],y[train_idx]
+            train_loader = DataloaderRankNet(X_train,y_train,None,batch_size=512)
+            for hp in hyperparameters_grid:
                 model = RankNet(X.shape[1],hidden_dim=hp['hidden_dim'],n_hidden=hp['n_hidden']).to(DEVICE)
                 train_RankNet(model,train_loader=train_loader,num_epochs=hp['num_epochs'],optimizer=torch.optim.Adam(model.parameters(),lr=0.01,weight_decay=hp['weight_decay']))
-                
                 predictions = model(X).reshape(-1)
                 metrics = PairwiseMetrics(y,predictions,test_idx,formulas=None)
                 results.append(metrics['PER_mixed'])
-    results_tensor = torch.stack(results).reshape(-1,n_itter*n_splits).mean(axis=1) 
+    results_tensor = torch.stack(results).reshape(-1,len(hyperparameters_grid)).mean(axis=0) 
     best_hp = hyperparameters_grid[torch.argmin(results_tensor)]
     best_model = RankNet(X.shape[1],hidden_dim=best_hp['hidden_dim'],n_hidden=best_hp['n_hidden']).to(DEVICE)
-    train_loader = DataloaderRankNet(X,y,None,batch_size=best_hp['batch_size'])
+    train_loader = DataloaderRankNet(X,y,None,batch_size=512)
     train_RankNet(best_model,train_loader=train_loader,num_epochs=best_hp['num_epochs'],optimizer=torch.optim.Adam(best_model.parameters(),lr=0.01,weight_decay=best_hp['weight_decay']))
     return best_model
 
