@@ -98,7 +98,6 @@ def CV_LogReg(X, y, classes, hyperparameters_grid, n_itter=5,n_splits=5):
             X_train,y_train = X[train_idx],y[train_idx]
             pairs,labels = linear_pairs(X_train,y_train,np.zeros(len(y_train)))
             for hp in hyperparameters_grid:
-                # 5 splits, 5 itterations, 10 hp
                 model = LogisticRegression(fit_intercept=False,C=hp)
                 model.fit(pairs,labels)
                 predictions = (model.coef_@X.T).reshape(-1)
