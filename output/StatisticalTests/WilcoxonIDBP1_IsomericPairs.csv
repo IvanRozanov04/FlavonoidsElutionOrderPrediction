@@ -1,0 +1,7 @@
+Pair;MeanDiff;95%CI_low;95%CI_high;p_raw;p_corr;Significant
+LinReg,LogReg92;6.173;4.657;7.673;0.0;0.0;True
+LinReg,NNBCE;3.061;1.466;4.696;0.001;0.005;True
+LinReg,NNMR;4.57;2.913;6.342;0.0;0.0;True
+LogReg92,NNBCE;-3.112;-4.984;-1.271;0.006;0.018;True
+LogReg92,NNMR;-1.603;-3.515;0.339;0.094;0.094;False
+NNBCE,NNMR;1.509;0.058;2.851;0.035;0.071;False
